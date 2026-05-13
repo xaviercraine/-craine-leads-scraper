@@ -29,6 +29,10 @@ def score_story(hit: dict, author_karma: int) -> tuple[float, list[str]]:
     tier1_in_body = matched_keywords_in_text(body, config.TIER_1_KEYWORDS)
     tier2 = matched_keywords_in_text(title + " " + body, config.TIER_2_KEYWORDS)
 
+    matched = list(dict.fromkeys(tier1_in_title + tier1_in_body + tier2))
+    if not matched:
+        return 0.0, []
+
     score = 0.0
     # Tier 1 in title is stronger signal than tier 1 in body. Use "or" — don't double-count.
     if tier1_in_title:
@@ -45,7 +49,6 @@ def score_story(hit: dict, author_karma: int) -> tuple[float, list[str]]:
         score += 0.1
 
     score = min(1.0, score)
-    matched = list(dict.fromkeys(tier1_in_title + tier1_in_body + tier2))  # preserve order, dedupe
     return score, matched
 
 
@@ -60,6 +63,10 @@ def score_comment(hit: dict, author_karma: int, parent_title: str = "") -> tuple
     tier1 = matched_keywords_in_text(text, config.TIER_1_KEYWORDS)
     tier3 = matched_keywords_in_text(text, config.TIER_3_KEYWORDS)
     tier1_in_parent = matched_keywords_in_text(parent_title, config.TIER_1_KEYWORDS)
+
+    matched = list(dict.fromkeys(tier1 + tier3 + tier1_in_parent))
+    if not matched:
+        return 0.0, []
 
     score = 0.0
     if tier1:
@@ -77,5 +84,4 @@ def score_comment(hit: dict, author_karma: int, parent_title: str = "") -> tuple
         score += 0.15
 
     score = min(1.0, score)
-    matched = list(dict.fromkeys(tier1 + tier3 + tier1_in_parent))
     return score, matched
