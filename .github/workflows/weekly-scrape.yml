@@ -1,0 +1,61 @@
+name: Weekly SOC 2 HN Scrape
+
+on:
+  schedule:
+    # Monday 12:00 UTC = Monday 8:00 AM ET (during EDT) / 7:00 AM ET (during EST).
+    # Lands well before the human Monday-morning triage window.
+    - cron: '0 12 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no sheet writes, just log what would be written)'
+        required: false
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+        default: 'false'
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    permissions:
+      # Needed so the job can commit the updated .last_run back to the repo.
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Ensure we can push back. Default token works because permissions.contents=write.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scraper
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          # When triggered manually, use the input. On schedule, always live.
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: python -m src.main
+
+      - name: Commit updated .last_run
+        # Only commit on live runs. Dry runs don't change .last_run.
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git config user.name "scraper-bot"
+          git config user.email "scraper-bot@users.noreply.github.com"
+          git add .last_run
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update last_run timestamp [skip ci]"
+            git push
+          else
+            echo "No change to .last_run; nothing to commit."
+          fi

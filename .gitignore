@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Environments
+.env
+.venv/
+venv/
+
+# Credentials — NEVER commit these.
+# The service account JSON belongs only in GitHub Secrets.
+*service-account*.json
+*service_account*.json
+*credentials*.json
+gcp-key.json
+key.json
+*.pem
+
+# IDE
+.vscode/
+.idea/
+
+# Testing
+.pytest_cache/
+.coverage
+
+# Note: .last_run is intentionally NOT ignored.
+# The Actions workflow commits it back so the next run resumes correctly.
